@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="ms">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Makmal Ais Kering</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+body{margin:0}
+/* Layout: a classroom lab bench — dark "stage" for each live simulation on the left, the question / class vote / answer on the right. */
+:root{
+  --bg:#edf3f8; --surface:#ffffff; --fg:#0f1f2e; --muted:#4f6478; --line:#d2dde7;
+  --accent:#0a67a8; --accent-soft:#dcebf6; --hot:#c9502a; --ok:#1f7a4d; --ok-soft:#dcf1e5; --warn:#a4401c; --warn-soft:#fbe6dc;
+  --stage:#0a1622; --stage-line:#1e3447; --stage-fg:#cfe2f2;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0b141d; --surface:#111f2c; --fg:#e4edf5; --muted:#93a8bb; --line:#22374a;
+  --accent:#5db6ef; --accent-soft:#16324a; --hot:#f08a5d; --ok:#5fd09a; --ok-soft:#123629; --warn:#f3a07a; --warn-soft:#3a2016;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0b141d; --surface:#111f2c; --fg:#e4edf5; --muted:#93a8bb; --line:#22374a;
+  --accent:#5db6ef; --accent-soft:#16324a; --hot:#f08a5d; --ok:#5fd09a; --ok-soft:#123629; --warn:#f3a07a; --warn-soft:#3a2016;
+  color-scheme:dark}
+
+[data-lang="ms"] [lang="en"], [data-lang="en"] [lang="ms"]{display:none!important}
+
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:17px;line-height:1.55}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.1;margin:0}
+p{margin:0}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+header.top{padding-block:18px 0}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--f-display);font-weight:800;font-size:20px}
+.brand .flake{width:30px;height:30px;border-radius:8px;background:var(--stage);display:grid;place-items:center}
+.lang{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface)}
+.lang button{font:700 14px var(--f-body);border:0;background:none;color:var(--muted);padding:6px 14px;border-radius:999px;cursor:pointer}
+.lang button[aria-pressed="true"]{background:var(--accent);color:var(--surface)}
+
+.hero{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:28px;align-items:end;padding-block:28px 26px}
+.eyebrow{font:700 13px var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+.hero h1{font-size:clamp(32px,5vw,54px);font-weight:800;letter-spacing:-.01em}
+.hero p.lede{margin-top:14px;color:var(--muted);max-width:60ch}
+.facts{display:grid;gap:10px}
+.fact{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:baseline;border-top:1px solid var(--line);padding-top:10px}
+.fact b{font:700 clamp(22px,2.6vw,30px) var(--f-mono);color:var(--accent);white-space:nowrap}
+.fact span{color:var(--muted);font-size:15px}
+
+nav.tabs{display:flex;gap:6px;overflow-x:auto;border-bottom:1px solid var(--line);scrollbar-width:thin}
+nav.tabs button{flex:0 0 auto;font:700 15px var(--f-body);background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:12px 14px 10px;cursor:pointer;display:flex;gap:8px;align-items:center}
+nav.tabs button .num{font:700 12px var(--f-mono);border:1.5px solid currentColor;border-radius:6px;padding:1px 6px}
+nav.tabs button[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+nav.tabs button.safety[aria-selected="true"]{border-bottom-color:var(--warn)}
+nav.tabs button.safety{color:var(--warn)}
+button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.panel{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:28px;padding-block:26px 40px}
+.stagebox{min-width:0;display:grid;gap:12px;align-content:start}
+.stage{background:var(--stage);border-radius:14px;overflow:hidden;position:relative}
+.stage canvas{display:block;width:100%;aspect-ratio:4/3;max-width:100%}
+.stage .tag{position:absolute;left:12px;top:10px;font:700 11px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:#7fa3c2}
+.controls{display:flex;flex-wrap:wrap;gap:12px 18px;align-items:center}
+.ctl{display:grid;gap:4px;min-width:0;flex:1 1 200px}
+.ctl label{font-size:14px;color:var(--muted);display:flex;justify-content:space-between;gap:8px}
+.ctl label output{font-family:var(--f-mono);color:var(--fg);font-weight:700}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.btn{font:700 15px var(--f-body);border:1.5px solid var(--accent);color:var(--accent);background:var(--surface);border-radius:10px;padding:9px 16px;cursor:pointer}
+.btn.primary{background:var(--accent);color:var(--surface)}
+.btn:hover{filter:brightness(1.08)}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.sw{display:flex;align-items:center;gap:8px;font:700 14px var(--f-body);border:1.5px solid var(--line);background:var(--surface);color:var(--fg);border-radius:999px;padding:6px 12px 6px 6px;cursor:pointer}
+.sw i{width:20px;height:20px;border-radius:50%;display:block;border:1px solid rgba(0,0,0,.15)}
+.sw[aria-pressed="true"]{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft)}
+.readout{display:flex;flex-wrap:wrap;gap:8px 20px;font-size:15px;color:var(--muted)}
+.readout b{font-family:var(--f-mono);color:var(--fg)}
+.meter{height:10px;border-radius:5px;background:var(--line);overflow:hidden;margin-top:4px}
+.meter i{display:block;height:100%;background:var(--accent);transition:width .3s}
+.meter.hot i{background:var(--hot)}
+.status{font-size:15px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);color:var(--fg)}
+.status.bad{background:var(--warn-soft)}
+
+.side{min-width:0;display:grid;gap:18px;align-content:start}
+.q h2{font-size:clamp(22px,2.4vw,28px);font-weight:800}
+.q .qno{font:700 13px var(--f-mono);color:var(--accent);letter-spacing:.08em;margin-bottom:8px;text-transform:uppercase}
+.vote{display:grid;gap:8px}
+.vote .hint{font-size:14px;color:var(--muted)}
+.opt{position:relative;overflow:hidden;display:flex;justify-content:space-between;align-items:center;gap:10px;text-align:left;font:700 16px var(--f-body);color:var(--fg);background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer}
+.opt .bar{position:absolute;inset:0 auto 0 0;width:0;background:var(--accent-soft);transition:width .25s;z-index:0}
+.opt .lbl,.opt .n{position:relative;z-index:1}
+.opt .n{font-family:var(--f-mono);font-size:15px;color:var(--muted);min-width:2ch;text-align:right}
+.revealed .opt[data-correct="1"]{border-color:var(--ok);background:var(--ok-soft)}
+.revealed .opt[data-correct="1"] .lbl::after{content:"  ✓";color:var(--ok)}
+.voterow{display:flex;gap:10px;flex-wrap:wrap}
+.linkbtn{background:none;border:0;color:var(--muted);font:14px var(--f-body);text-decoration:underline;cursor:pointer;padding:4px}
+.answer{border-left:4px solid var(--ok);padding:4px 0 4px 16px;display:grid;gap:10px}
+.answer h3{font-size:20px;color:var(--ok)}
+.answer p{max-width:62ch}
+.eq{font-family:var(--f-mono);background:var(--accent-soft);border-radius:8px;padding:8px 12px;font-size:15px;overflow-x:auto;white-space:nowrap}
+.terms{display:flex;flex-wrap:wrap;gap:6px}
+.terms span{font-size:13px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:3px 10px;color:var(--muted)}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{font-weight:700;cursor:pointer;color:var(--accent)}
+details ol,details ul{margin:10px 0 0;padding-left:22px;display:grid;gap:6px}
+.vars{width:100%;border-collapse:collapse;margin-top:10px;font-size:15px}
+.vars th,.vars td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+.vars th{color:var(--muted);font-weight:700;width:38%}
+.discuss{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.discuss h3{font-size:16px;margin-bottom:6px}
+.discuss ul{margin:0;padding-left:20px;display:grid;gap:4px;font-size:15px}
+
+.safety-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px;padding-block:26px 12px}
+.rule{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:grid;gap:6px;align-content:start}
+.rule h3{font-size:18px}
+.rule.must{border-color:var(--warn)}
+.rule.must h3{color:var(--warn)}
+.rule p{font-size:15px;color:var(--muted)}
+.bonus{padding-block:10px 40px;display:grid;gap:12px}
+.bonus h2{font-size:24px}
+.bonus ul{margin:0;padding-left:22px;display:grid;gap:8px;max-width:75ch}
+footer{color:var(--muted);font-size:13px;padding-block:20px 30px;border-top:1px solid var(--line)}
+
+@media (max-width:860px){
+  .hero,.panel{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body style="margin:0">
+
+<div id="app" data-lang="ms">
+<header class="top wrap">
+  <div class="topbar">
+    <div class="brand"><span class="flake"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#cfe2f2" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M20.7 7 3.3 17M9 4l3 2 3-2M9 20l3-2 3 2"/></svg></span>
+      <span lang="ms">Makmal Ais Kering</span><span lang="en">Dry Ice Lab</span></div>
+    <div class="lang" role="group" aria-label="Bahasa / Language">
+      <button id="lang-ms" aria-pressed="true">BM</button><button id="lang-en" aria-pressed="false">EN</button>
+    </div>
+  </div>
+  <section class="hero">
+    <div>
+      <div class="eyebrow"><span lang="ms">Pameran Sains · 4 eksperimen</span><span lang="en">Science Fair · 4 experiments</span></div>
+      <h1><span lang="ms">Ais kering: pepejal yang terus menjadi gas</span><span lang="en">Dry ice: the solid that skips straight to gas</span></h1>
+      <p class="lede"><span lang="ms">Ais kering ialah karbon dioksida (CO₂) pepejal. Ia tidak cair, tetapi <b>menyublim</b> terus menjadi gas. Untuk setiap eksperimen: murid buat ramalan dahulu, kemudian kita uji dan terangkan.</span><span lang="en">Dry ice is solid carbon dioxide (CO₂). It never melts; it <b>sublimes</b> straight into gas. For each experiment: students predict first, then we test it and explain.</span></p>
+    </div>
+    <div class="facts">
+      <div class="fact"><b>−78.5 °C</b><span lang="ms">suhu ais kering pada tekanan atmosfera</span><span lang="en">temperature of dry ice at atmospheric pressure</span></div>
+      <div class="fact"><b>1 g → 0.55 L</b><span lang="ms">isi padu gas CO₂ pada suhu bilik (24 dm³ mol⁻¹)</span><span lang="en">volume of CO₂ gas at room temperature (24 dm³ mol⁻¹)</span></div>
+      <div class="fact"><b>1.65×</b><span lang="ms">CO₂ lebih tumpat daripada udara (1.98 vs 1.20 g/L)</span><span lang="en">CO₂ is denser than air (1.98 vs 1.20 g/L)</span></div>
+    </div>
+  </section>
+  <nav class="tabs" role="tablist" aria-label="Eksperimen">
+    <button role="tab" id="tab-0" aria-selected="true" aria-controls="p0"><span class="num">1</span><span lang="ms">Air panas vs sejuk</span><span lang="en">Hot vs cold water</span></button>
+    <button role="tab" id="tab-1" aria-selected="false" aria-controls="p1"><span class="num">2</span><span lang="ms">Air berwarna</span><span lang="en">Coloured water</span></button>
+    <button role="tab" id="tab-2" aria-selected="false" aria-controls="p2"><span class="num">3</span><span lang="ms">Lilin</span><span lang="en">Candles</span></button>
+    <button role="tab" id="tab-3" aria-selected="false" aria-controls="p3"><span class="num">4</span><span lang="ms">Belon</span><span lang="en">Balloon</span></button>
+    <button role="tab" id="tab-4" class="safety" aria-selected="false" aria-controls="p4"><span class="num">!</span><span lang="ms">Keselamatan</span><span lang="en">Safety</span></button>
+  </nav>
+</header>
+
+<main class="wrap">
+<!-- ============ 1. HOT VS COLD ============ -->
+<section class="panel" id="p0" role="tabpanel" aria-labelledby="tab-0">
+  <div class="stagebox">
+    <div class="stage"><span class="tag">simulasi</span><canvas id="c0"></canvas></div>
+    <div class="controls">
+      <div class="ctl"><label for="t-left"><span><span lang="ms">Bekas A</span><span lang="en">Beaker A</span></span><output id="o-left">80 °C</output></label><input type="range" id="t-left" min="2" max="90" value="80"></div>
+      <div class="ctl"><label for="t-right"><span><span lang="ms">Bekas B</span><span lang="en">Beaker B</span></span><output id="o-right">10 °C</output></label><input type="range" id="t-right" min="2" max="90" value="10"></div>
+    </div>
+    <div class="controls">
+      <div class="ctl"><label><span lang="ms">Kadar kabus A</span><span lang="en">Fog rate A</span></label><div class="meter hot" id="m-left"><i></i></div></div>
+      <div class="ctl"><label><span lang="ms">Kadar kabus B</span><span lang="en">Fog rate B</span></label><div class="meter" id="m-right"><i></i></div></div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="q"><div class="qno"><span lang="ms">Eksperimen 1 · Ramal dahulu</span><span lang="en">Experiment 1 · Predict first</span></div>
+      <h2><span lang="ms">Air panas atau air sejuk: yang mana menghasilkan lebih banyak "asap"? Kenapa?</span><span lang="en">Hot water or cold water: which makes more "smoke"? Why?</span></h2></div>
+    <div class="vote" data-ex="0">
+      <div class="hint"><span lang="ms">Tekan pilihan untuk kira undian kelas (satu tekan = satu tangan).</span><span lang="en">Tap an option to count class votes (one tap = one raised hand).</span></div>
+      <button class="opt" data-correct="1"><span class="bar"></span><span class="lbl"><span lang="ms">Air panas</span><span lang="en">Hot water</span></span><span class="n">0</span></button>
+      <button class="opt"><span class="bar"></span><span class="lbl"><span lang="ms">Air sejuk</span><span lang="en">Cold water</span></span><span class="n">0</span></button>
+      <button class="opt"><span class="bar"></span><span class="lbl"><span lang="ms">Sama sahaja</span><span lang="en">The same</span></span><span class="n">0</span></button>
+      <div class="voterow"><button class="btn primary reveal"><span lang="ms">Tunjuk jawapan</span><span lang="en">Show answer</span></button><button class="linkbtn reset"><span lang="ms">Set semula undian</span><span lang="en">Reset votes</span></button></div>
+    </div>
+    <div class="answer" hidden>
+      <h3><span lang="ms">Air panas menghasilkan lebih banyak kabus</span><span lang="en">Hot water makes much more fog</span></h3>
+      <p><span lang="ms">"Asap" itu sebenarnya <b>kabus</b>: titisan air yang sangat halus, bukan gas CO₂. Gas CO₂ sendiri tidak nampak.</span><span lang="en">The "smoke" is really <b>fog</b>: tiny droplets of water, not CO₂ gas. CO₂ gas itself is invisible.</span></p>
+      <p><span lang="ms">Air panas membekalkan lebih banyak haba, jadi ais kering <b>menyublim</b> lebih cepat. Air panas juga membebaskan lebih banyak wap air. Gas CO₂ yang sangat sejuk menyejukkan wap air itu sehingga ia <b>terkondensasi</b> menjadi titisan kabus. Kesannya, ais kering dalam air panas juga habis lebih cepat.</span><span lang="en">Hot water supplies more heat, so the dry ice <b>sublimes</b> faster. Hot water also releases more water vapour. The very cold CO₂ chills that vapour until it <b>condenses</b> into fog droplets. As a result, dry ice in hot water also runs out faster.</span></p>
+      <div class="eq">CO₂(s) → CO₂(g) &nbsp;·&nbsp; H₂O(g) → H₂O(l) <span lang="ms">titisan kabus</span><span lang="en">fog droplets</span></div>
+      <div class="terms"><span lang="ms">Pemejalwapan</span><span lang="en">Sublimation</span><span lang="ms">Kondensasi</span><span lang="en">Condensation</span><span lang="ms">Pemindahan haba</span><span lang="en">Heat transfer</span></div>
+    </div>
+    <details><summary><span lang="ms">Cara jalankan di pameran</span><span lang="en">How to run it at the fair</span></summary>
+      <ol>
+        <li><span lang="ms">Sediakan dua bikar sama saiz. Isi satu dengan air panas (kira-kira 70 °C) dan satu dengan air sejuk berais, isi padu sama.</span><span lang="en">Use two identical beakers. Fill one with hot water (about 70 °C) and one with iced water, same volume.</span></li>
+        <li><span lang="ms">Guna penyepit untuk masukkan ketulan ais kering yang sama saiz ke dalam kedua-dua bikar serentak.</span><span lang="en">Using tongs, drop same-size pieces of dry ice into both at the same time.</span></li>
+        <li><span lang="ms">Murid perhatikan jumlah kabus dan catat masa sehingga ais kering habis.</span><span lang="en">Students compare the amount of fog and time how long until the dry ice is gone.</span></li>
+      </ol>
+      <table class="vars">
+        <tr><th><span lang="ms">Dimanipulasikan</span><span lang="en">Manipulated</span></th><td><span lang="ms">Suhu air</span><span lang="en">Water temperature</span></td></tr>
+        <tr><th><span lang="ms">Bergerak balas</span><span lang="en">Responding</span></th><td><span lang="ms">Jumlah kabus / masa ais kering habis</span><span lang="en">Amount of fog / time for dry ice to disappear</span></td></tr>
+        <tr><th><span lang="ms">Dimalarkan</span><span lang="en">Fixed</span></th><td><span lang="ms">Jisim ais kering, isi padu air, saiz bikar</span><span lang="en">Mass of dry ice, volume of water, beaker size</span></td></tr>
+      </table>
+    </details>
+    <div class="discuss"><h3><span lang="ms">Soalan perbincangan</span><span lang="en">Discussion questions</span></h3>
+      <ul><li><span lang="ms">Kenapa kabus jatuh ke bawah dan mengalir di atas meja?</span><span lang="en">Why does the fog sink and flow across the table?</span></li>
+      <li><span lang="ms">Kenapa air panas makin lama makin sejuk?</span><span lang="en">Why does the hot water gradually cool down?</span></li></ul></div>
+  </div>
+</section>
+
+<!-- ============ 2. COLOURED WATER ============ -->
+<section class="panel" id="p1" role="tabpanel" aria-labelledby="tab-1" hidden>
+  <div class="stagebox">
+    <div class="stage"><span class="tag">simulasi</span><canvas id="c1"></canvas></div>
+    <div class="swatches" role="group" aria-label="Warna air">
+      <button class="sw" data-col="none" aria-pressed="false"><i style="background:#9cc7ea"></i><span lang="ms">Air biasa</span><span lang="en">Plain water</span></button>
+      <button class="sw" data-col="red" aria-pressed="true"><i style="background:#dc283c"></i><span lang="ms">Merah</span><span lang="en">Red</span></button>
+      <button class="sw" data-col="blue" aria-pressed="false"><i style="background:#285ae6"></i><span lang="ms">Biru</span><span lang="en">Blue</span></button>
+      <button class="sw" data-col="green" aria-pressed="false"><i style="background:#28aa50"></i><span lang="ms">Hijau</span><span lang="en">Green</span></button>
+      <button class="sw" data-col="indicator" aria-pressed="false"><i style="background:conic-gradient(#d23,#f90,#ee0,#3a5,#36c,#83c,#d23)"></i><span lang="ms">Penunjuk universal</span><span lang="en">Universal indicator</span></button>
+    </div>
+    <div class="readout" id="r1"></div>
+  </div>
+  <div class="side">
+    <div class="q"><div class="qno"><span lang="ms">Eksperimen 2 · Ramal dahulu</span><span lang="en">Experiment 2 · Predict first</span></div>
+      <h2><span lang="ms">Kalau air diwarnakan, adakah "asap" juga akan berwarna?</span><span lang="en">If the water is coloured, will the "smoke" be coloured too?</span></h2></div>
+    <div class="vote" data-ex="1">
+      <div class="hint"><span lang="ms">Tekan pilihan untuk kira undian kelas.</span><span lang="en">Tap an option to count class votes.</span></div>
+      <button class="opt"><span class="bar"></span><span class="lbl"><span lang="ms">Ya, ikut warna air</span><span lang="en">Yes, same colour as the water</span></span><span class="n">0</span></button>
+      <button class="opt" data-correct="1"><span class="bar"></span><span class="lbl"><span lang="ms">Tidak, tetap putih</span><span lang="en">No, it stays white</span></span><span class="n">0</span></button>
+      <button class="opt"><span class="bar"></span><span class="lbl"><span lang="ms">Warna lebih pudar</span><span lang="en">A paler version of the colour</span></span><span class="n">0</span></button>
+      <div class="voterow"><button class="btn primary reveal"><span lang="ms">Tunjuk jawapan</span><span lang="en">Show answer</span></button><button class="linkbtn reset"><span lang="ms">Set semula undian</span><span lang="en">Reset votes</span></button></div>
+    </div>
+    <div class="answer" hidden>
+      <h3><span lang="ms">Kabus tetap putih</span><span lang="en">The fog stays white</span></h3>
+      <p><span lang="ms">Kabus terbentuk daripada <b>wap air</b> yang terkondensasi. Hanya molekul air yang meruap; molekul pewarna jauh lebih besar dan tertinggal di dalam air. Prinsipnya sama seperti penyulingan.</span><span lang="en">The fog forms from <b>water vapour</b> that condenses. Only water molecules evaporate; the dye molecules are much larger and stay behind in the liquid. It is the same idea as distillation.</span></p>
+      <p><span lang="ms"><b>Bonus:</b> pilih "Penunjuk universal". CO₂ melarut dalam air dan membentuk asid karbonik, jadi warna berubah daripada hijau kepada kuning dan oren. Gas yang tidak nampak tetap meninggalkan kesan kimia yang boleh dilihat.</span><span lang="en"><b>Bonus:</b> pick "Universal indicator". CO₂ dissolves in water to form carbonic acid, so the colour shifts from green to yellow and orange. An invisible gas leaves a chemical change you can see.</span></p>
+      <div class="eq">CO₂ + H₂O ⇌ H₂CO₃ ⇌ H⁺ + HCO₃⁻</div>
+      <div class="terms"><span lang="ms">Penyejatan</span><span lang="en">Evaporation</span><span lang="ms">Bahan meruap</span><span lang="en">Volatility</span><span lang="ms">Asid lemah</span><span lang="en">Weak acid</span><span>pH</span></div>
+    </div>
+    <details><summary><span lang="ms">Cara jalankan di pameran</span><span lang="en">How to run it at the fair</span></summary>
+      <ol>
+        <li><span lang="ms">Sediakan 3 bikar air suam dengan pewarna makanan merah, biru dan hijau.</span><span lang="en">Prepare 3 beakers of warm water with red, blue and green food colouring.</span></li>
+        <li><span lang="ms">Masukkan ais kering. Letak kertas putih di belakang supaya warna kabus jelas.</span><span lang="en">Add dry ice. Put white card behind the beakers so the fog colour is easy to judge.</span></li>
+        <li><span lang="ms">Bikar keempat: air + beberapa titis penunjuk universal (atau jus kubis ungu). Perhatikan perubahan warna dalam 1–2 minit.</span><span lang="en">Fourth beaker: water + a few drops of universal indicator (or red cabbage juice). Watch the colour change over 1–2 minutes.</span></li>
+      </ol>
+    </details>
+    <div class="discuss"><h3><span lang="ms">Soalan perbincangan</span><span lang="en">Discussion questions</span></h3>
+      <ul><li><span lang="ms">Bagaimana kita boleh buktikan kabus itu air, bukan CO₂?</span><span lang="en">How could we prove the fog is water, not CO₂?</span></li>
+      <li><span lang="ms">Kenapa minuman bergas terasa sedikit masam?</span><span lang="en">Why do fizzy drinks taste slightly sour?</span></li></ul></div>
+  </div>
+</section>
+
+<!-- ============ 3. CANDLES ============ -->
+<section class="panel" id="p2" role="tabpanel" aria-labelledby="tab-2" hidden>
+  <div class="stagebox">
+    <div class="stage"><span class="tag">simulasi</span><canvas id="c2"></canvas></div>
+    <div class="controls">
+      <div class="swatches" role="group" aria-label="Keadaan">
+        <button class="sw" id="mode-tank" aria-pressed="true"><span lang="ms">Dalam tangki kaca</span><span lang="en">Inside a glass tank</span></button>
+        <button class="sw" id="mode-open" aria-pressed="false"><span lang="ms">Udara terbuka</span><span lang="en">Open air</span></button>
+      </div>
+      <button class="btn primary" id="c-start"><span lang="ms">Masukkan ais kering</span><span lang="en">Add dry ice</span></button>
+      <button class="btn" id="c-reset"><span lang="ms">Nyalakan semula</span><span lang="en">Relight</span></button>
+    </div>
+    <div class="status" id="s2"></div>
+  </div>
+  <div class="side">
+    <div class="q"><div class="qno"><span lang="ms">Eksperimen 3 · Ramal dahulu</span><span lang="en">Experiment 3 · Predict first</span></div>
+      <h2><span lang="ms">Lilin diletakkan di sebelah ais kering. Adakah ia terus menyala?</span><span lang="en">A candle is placed next to dry ice. Will it stay lit?</span></h2></div>
+    <div class="vote" data-ex="2">
+      <div class="hint"><span lang="ms">Tekan pilihan untuk kira undian kelas.</span><span lang="en">Tap an option to count class votes.</span></div>
+      <button class="opt"><span class="bar"></span><span class="lbl"><span lang="ms">Terus menyala</span><span lang="en">Stays lit</span></span><span class="n">0</span></button>
+      <button class="opt"><span class="bar"></span><span class="lbl"><span lang="ms">Padam</span><span lang="en">Goes out</span></span><span class="n">0</span></button>
+      <button class="opt" data-correct="1"><span class="bar"></span><span class="lbl"><span lang="ms">Bergantung pada keadaan</span><span lang="en">It depends</span></span><span class="n">0</span></button>
+      <div class="voterow"><button class="btn primary reveal"><span lang="ms">Tunjuk jawapan</span><span lang="en">Show answer</span></button><button class="linkbtn reset"><span lang="ms">Set semula undian</span><span lang="en">Reset votes</span></button></div>
+    </div>
+    <div class="answer" hidden>
+      <h3><span lang="ms">Bergantung: di mana CO₂ berkumpul</span><span lang="en">It depends on where the CO₂ collects</span></h3>
+      <p><span lang="ms">CO₂ <b>tidak menyokong pembakaran</b> dan lebih tumpat daripada udara. Di udara terbuka, gas itu tersebar dan lilin biasanya terus menyala. Di dalam tangki, CO₂ berkumpul dari bawah dan menolak keluar oksigen. Lilin paling rendah padam dahulu, kemudian yang sederhana, dan akhir sekali yang tinggi.</span><span lang="en">CO₂ <b>does not support combustion</b> and is denser than air. In open air it spreads out and the candle usually stays lit. Inside a tank, CO₂ fills up from the bottom and pushes out the oxygen. The lowest candle goes out first, then the middle one, then the tall one.</span></p>
+      <p><span lang="ms">Perhatikan: lilin padam walaupun kabus belum sampai ke nyalaan. Yang memadamkan api ialah CO₂ yang tidak nampak, bukan kabus.</span><span lang="en">Notice that a candle can go out before the fog reaches its flame. The invisible CO₂ puts it out, not the fog.</span></p>
+      <div class="eq"><span lang="ms">Ketumpatan</span><span lang="en">Density</span>: CO₂ 1.98 g/L &gt; <span lang="ms">udara</span><span lang="en">air</span> 1.20 g/L</div>
+      <div class="terms"><span lang="ms">Segi tiga api</span><span lang="en">Fire triangle</span><span lang="ms">Ketumpatan gas</span><span lang="en">Gas density</span><span lang="ms">Alat pemadam CO₂</span><span lang="en">CO₂ extinguisher</span></div>
+    </div>
+    <details><summary><span lang="ms">Cara jalankan di pameran</span><span lang="en">How to run it at the fair</span></summary>
+      <ol>
+        <li><span lang="ms">Letak 3 lilin berlainan ketinggian dalam tangki ikan atau bikar besar.</span><span lang="en">Stand 3 candles of different heights inside a fish tank or large beaker.</span></li>
+        <li><span lang="ms">Nyalakan semua lilin (guru sahaja). Letak mangkuk kecil berisi ais kering dan sedikit air suam di satu sudut.</span><span lang="en">Light all candles (teacher only). Put a small bowl of dry ice with a little warm water in one corner.</span></li>
+        <li><span lang="ms">Murid catat urutan lilin padam. Ulang di atas meja terbuka sebagai perbandingan.</span><span lang="en">Students record the order the candles go out. Repeat on an open table to compare.</span></li>
+        <li><span lang="ms">Variasi: kumpul CO₂ dalam jag, kemudian "tuang" gas yang tidak nampak ke atas lilin.</span><span lang="en">Variation: collect CO₂ in a jug, then "pour" the invisible gas over a candle.</span></li>
+      </ol>
+    </details>
+    <div class="discuss"><h3><span lang="ms">Soalan perbincangan</span><span lang="en">Discussion questions</span></h3>
+      <ul><li><span lang="ms">Kenapa alat pemadam api CO₂ digunakan untuk kebakaran elektrik?</span><span lang="en">Why are CO₂ extinguishers used on electrical fires?</span></li>
+      <li><span lang="ms">Kenapa bilik bawah tanah yang ada ais kering berbahaya?</span><span lang="en">Why is a basement storing dry ice dangerous?</span></li></ul></div>
+  </div>
+</section>
+
+<!-- ============ 4. BALLOON ============ -->
+<section class="panel" id="p3" role="tabpanel" aria-labelledby="tab-3" hidden>
+  <div class="stagebox">
+    <div class="stage"><span class="tag">simulasi</span><canvas id="c3"></canvas></div>
+    <div class="controls">
+      <div class="ctl"><label for="b-mass"><span><span lang="ms">Jisim ais kering</span><span lang="en">Mass of dry ice</span></span><output id="o-mass">8 g</output></label><input type="range" id="b-mass" min="2" max="30" value="8"></div>
+      <div class="swatches" role="group" aria-label="Air">
+        <button class="sw" id="b-warm" aria-pressed="true"><span lang="ms">Air suam</span><span lang="en">Warm water</span></button>
+        <button class="sw" id="b-cold" aria-pressed="false"><span lang="ms">Tanpa air</span><span lang="en">No water</span></button>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn primary" id="b-start"><span lang="ms">Pasang belon</span><span lang="en">Attach balloon</span></button>
+      <button class="btn" id="b-reset"><span lang="ms">Set semula</span><span lang="en">Reset</span></button>
+    </div>
+    <div class="eq" id="b-calc"></div>
+    <div class="status" id="s3"></div>
+  </div>
+  <div class="side">
+    <div class="q"><div class="qno"><span lang="ms">Eksperimen 4 · Ramal dahulu</span><span lang="en">Experiment 4 · Predict first</span></div>
+      <h2><span lang="ms">Botol berisi ais kering ditutup dengan belon. Apa akan berlaku?</span><span lang="en">A bottle with dry ice inside is capped with a balloon. What happens?</span></h2></div>
+    <div class="vote" data-ex="3">
+      <div class="hint"><span lang="ms">Tekan pilihan untuk kira undian kelas.</span><span lang="en">Tap an option to count class votes.</span></div>
+      <button class="opt" data-correct="1"><span class="bar"></span><span class="lbl"><span lang="ms">Belon mengembang</span><span lang="en">The balloon inflates</span></span><span class="n">0</span></button>
+      <button class="opt"><span class="bar"></span><span class="lbl"><span lang="ms">Belon tersedut ke dalam</span><span lang="en">The balloon gets sucked in</span></span><span class="n">0</span></button>
+      <button class="opt"><span class="bar"></span><span class="lbl"><span lang="ms">Tiada perubahan</span><span lang="en">Nothing happens</span></span><span class="n">0</span></button>
+      <div class="voterow"><button class="btn primary reveal"><span lang="ms">Tunjuk jawapan</span><span lang="en">Show answer</span></button><button class="linkbtn reset"><span lang="ms">Set semula undian</span><span lang="en">Reset votes</span></button></div>
+    </div>
+    <div class="answer" hidden>
+      <h3><span lang="ms">Belon mengembang sendiri</span><span lang="en">The balloon inflates by itself</span></h3>
+      <p><span lang="ms">Apabila ais kering menyublim, pepejal CO₂ bertukar menjadi gas yang memerlukan ruang kira-kira <b>850 kali</b> lebih besar. Gas itu tiada tempat lain untuk pergi, jadi ia meniup belon. Air suam mempercepatkan proses.</span><span lang="en">When dry ice sublimes, solid CO₂ turns into gas that takes up roughly <b>850 times</b> more space. The gas has nowhere else to go, so it inflates the balloon. Warm water speeds it up.</span></p>
+      <p><span lang="ms">Murid boleh kira sendiri: bilangan mol = jisim ÷ jisim molar (CO₂ = 44 g mol⁻¹), kemudian darab dengan isi padu molar 24 dm³ mol⁻¹.</span><span lang="en">Students can calculate it: moles = mass ÷ molar mass (CO₂ = 44 g mol⁻¹), then multiply by the molar volume, 24 dm³ mol⁻¹.</span></p>
+      <div class="eq">V = (10 g ÷ 44 g mol⁻¹) × 24 dm³ mol⁻¹ ≈ 5.5 dm³</div>
+      <div class="terms"><span lang="ms">Konsep mol</span><span lang="en">Mole concept</span><span lang="ms">Isi padu molar</span><span lang="en">Molar volume</span><span lang="ms">Tekanan gas</span><span lang="en">Gas pressure</span></div>
+    </div>
+    <details open><summary><span lang="ms">Cara jalankan di pameran</span><span lang="en">How to run it at the fair</span></summary>
+      <ol>
+        <li><span lang="ms">Guna botol plastik 500 mL. Masukkan sedikit air suam.</span><span lang="en">Use a 500 mL plastic bottle with a little warm water.</span></li>
+        <li><span lang="ms">Guna corong atau penyepit untuk masukkan 3–5 g ais kering (beberapa butir pelet kecil).</span><span lang="en">Use a funnel or tongs to add 3–5 g of dry ice (a few small pellets).</span></li>
+        <li><span lang="ms">Terus regangkan belon di mulut botol.</span><span lang="en">Quickly stretch a balloon over the bottle mouth.</span></li>
+      </ol>
+      <p class="status bad" style="margin-top:10px"><span lang="ms"><b>Jangan sekali-kali</b> tutup botol dengan penutup atau masukkan ais kering ke dalam bekas kedap udara. Tekanan boleh meletupkan bekas. Belon berfungsi sebagai injap keselamatan.</span><span lang="en"><b>Never</b> screw a cap on or put dry ice in any airtight container. The pressure can burst it. The balloon acts as a safety valve.</span></p>
+    </details>
+  </div>
+</section>
+
+<!-- ============ SAFETY ============ -->
+<section id="p4" role="tabpanel" aria-labelledby="tab-4" hidden>
+  <div class="safety-grid">
+    <div class="rule must"><h3><span lang="ms">Jangan sentuh dengan tangan</span><span lang="en">Never touch it bare-handed</span></h3><p><span lang="ms">Pada −78.5 °C, ais kering boleh menyebabkan "melecur sejuk" dalam beberapa saat. Guna sarung tangan berpenebat dan penyepit.</span><span lang="en">At −78.5 °C it causes cold burns within seconds. Use insulated gloves and tongs.</span></p></div>
+    <div class="rule must"><h3><span lang="ms">Jangan simpan dalam bekas kedap</span><span lang="en">No airtight containers</span></h3><p><span lang="ms">Botol bertutup, balang atau termos boleh meletup. Simpan dalam kotak polistirena dengan penutup longgar.</span><span lang="en">Capped bottles, jars or flasks can explode. Store it in a polystyrene box with a loose lid.</span></p></div>
+    <div class="rule must"><h3><span lang="ms">Jangan makan atau masukkan ke mulut</span><span lang="en">Never eat it or put it in a drink</span></h3><p><span lang="ms">Ketulan yang tertelan boleh mencederakan mulut dan perut dengan teruk.</span><span lang="en">A swallowed piece can seriously injure the mouth and stomach.</span></p></div>
+    <div class="rule"><h3><span lang="ms">Pastikan pengudaraan baik</span><span lang="en">Keep the room ventilated</span></h3><p><span lang="ms">CO₂ berkumpul di aras lantai. Buka tingkap atau pintu, dan elakkan bilik kecil tertutup.</span><span lang="en">CO₂ pools at floor level. Open windows or doors and avoid small closed rooms.</span></p></div>
+    <div class="rule"><h3><span lang="ms">Murid berdiri di belakang garisan</span><span lang="en">Students stay behind a line</span></h3><p><span lang="ms">Guru mengendalikan ais kering. Murid perhatikan dari jarak kira-kira satu meter, pakai cermin mata keselamatan jika ada.</span><span lang="en">The teacher handles the dry ice. Students watch from about a metre away, with safety goggles if available.</span></p></div>
+    <div class="rule"><h3><span lang="ms">Pelupusan</span><span lang="en">Disposal</span></h3><p><span lang="ms">Biarkan baki ais kering menyublim di tempat terbuka yang berpengudaraan. Jangan buang ke dalam sinki atau tandas.</span><span lang="en">Let leftovers sublime in a ventilated open area. Do not put it down a sink or toilet.</span></p></div>
+  </div>
+  <section class="bonus">
+    <h2><span lang="ms">Idea tambahan jika ada masa</span><span lang="en">Extra ideas if time allows</span></h2>
+    <ul>
+      <li><span lang="ms"><b>Bola kristal buih:</b> sapu filem sabun di atas mangkuk berisi air dan ais kering. Buih besar terbentuk dan penuh dengan kabus.</span><span lang="en"><b>Crystal ball bubble:</b> drag a soap film across a bowl of water and dry ice. A big dome forms, full of fog.</span></li>
+      <li><span lang="ms"><b>Buih terapung:</b> tiup buih sabun ke dalam tangki berisi CO₂. Buih terapung di atas lapisan gas yang tidak nampak.</span><span lang="en"><b>Floating bubbles:</b> blow soap bubbles into a tank filled with CO₂. They float on an invisible layer of gas.</span></li>
+      <li><span lang="ms"><b>Sudu menjerit:</b> tekan sudu logam ke atas ais kering. Ia bergetar dan berbunyi kerana gas yang terbentuk menolak sudu berulang kali.</span><span lang="en"><b>Screaming spoon:</b> press a metal spoon onto dry ice. It vibrates and squeals as the gas formed pushes it away again and again.</span></li>
+    </ul>
+  </section>
+</section>
+</main>
+<footer class="wrap"><span lang="ms">Simulasi ini menunjukkan trend secara kualitatif, bukan ukuran sebenar. Sentiasa uji eksperimen sebelum hari pameran.</span><span lang="en">The simulations show qualitative trends, not exact measurements. Always rehearse the experiments before the fair.</span></footer>
+</div>
+
+<script>
+(() => {
+const app = document.getElementById('app');
+let lang = 'ms';
+try { const s = localStorage.getItem('dil-lang'); if (s === 'en' || s === 'ms') lang = s; } catch (e) {}
+const tr = (ms, en) => lang === 'ms' ? ms : en;
+function setLang(l){ lang = l; app.dataset.lang = l; document.documentElement.lang = l;
+  document.getElementById('lang-ms').setAttribute('aria-pressed', l === 'ms');
+  document.getElementById('lang-en').setAttribute('aria-pressed', l === 'en');
+  try { localStorage.setItem('dil-lang', l); } catch (e) {} }
+document.getElementById('lang-ms').onclick = () => setLang('ms');
+document.getElementById('lang-en').onclick = () => setLang('en');
+setLang(lang);
+
+/* ---------- tabs ---------- */
+let active = 0;
+const tabs = [...document.querySelectorAll('nav.tabs button')];
+tabs.forEach((t, i) => t.addEventListener('click', () => {
+  active = i;
+  tabs.forEach((b, j) => b.setAttribute('aria-selected', i === j));
+  for (let j = 0; j < 5; j++) document.getElementById('p' + j).hidden = j !== i;
+}));
+
+/* ---------- votes ---------- */
+document.querySelectorAll('.vote').forEach(v => {
+  const opts = [...v.querySelectorAll('.opt')];
+  const ans = v.parentElement.querySelector('.answer');
+  const upd = () => { const tot = opts.reduce((a, b) => a + (+b.dataset.n || 0), 0);
+    opts.forEach(o => { const n = +o.dataset.n || 0; o.querySelector('.n').textContent = n;
+      o.querySelector('.bar').style.width = tot ? (n / tot * 100) + '%' : '0'; }); };
+  opts.forEach(o => o.addEventListener('click', () => { o.dataset.n = (+o.dataset.n || 0) + 1; upd(); }));
+  v.querySelector('.reveal').addEventListener('click', () => { v.classList.add('revealed'); ans.hidden = false; });
+  v.querySelector('.reset').addEventListener('click', () => { opts.forEach(o => o.dataset.n = 0); v.classList.remove('revealed'); ans.hidden = true; upd(); });
+});
+
+/* ---------- canvas helpers ---------- */
+function stage(id){
+  const c = document.getElementById(id), ctx = c.getContext('2d'); const s = { c, ctx, W: 0, H: 0 };
+  const rs = () => { const r = c.getBoundingClientRect(); if (!r.width) return; const d = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = Math.round(r.width * d); c.height = Math.round(r.height * d); ctx.setTransform(d, 0, 0, d, 0, 0); s.W = r.width; s.H = r.height; };
+  new ResizeObserver(rs).observe(c); rs(); return s;
+}
+const sprite = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(.45, 'rgba(255,255,255,.5)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
+const smokeSprite = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d');
+  const gr = g.createRadialGradient(32, 32, 0, 32, 32, 32); gr.addColorStop(0, 'rgba(150,150,160,.9)'); gr.addColorStop(1, 'rgba(150,150,160,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64); return c; })();
+const rnd = (a, b) => a + Math.random() * (b - a);
+
+class Fog {
+  constructor(max = 500){ this.p = []; this.max = max; }
+  emit(x, y, spread, o = {}){ if (this.p.length >= this.max) return;
+    this.p.push({ x: x + rnd(-.5, .5) * spread, y, vx: rnd(-.5, .5) * (o.vx ?? 30), vy: -(o.up ?? 18) * rnd(.4, 1.2),
+      r: (o.r ?? 9) * rnd(.6, 1.4), life: 0, max: (o.life ?? 3.2) * rnd(.6, 1.3), a: o.a ?? .32, img: o.img || sprite }); }
+  step(dt, floor, g = 14, box){ const P = this.p;
+    for (let i = P.length - 1; i >= 0; i--){ const q = P[i]; q.life += dt; q.vy += g * dt; q.vx *= (1 - .4 * dt);
+      q.x += q.vx * dt; q.y += q.vy * dt; q.r += 7 * dt;
+      if (q.y > floor - q.r * .35){ q.y = floor - q.r * .35; q.vy = 0; q.vx += (q.vx >= 0 ? 1 : -1) * 14 * dt; }
+      if (box){ if (q.x < box[0]){ q.x = box[0]; q.vx = Math.abs(q.vx); } if (q.x > box[1]){ q.x = box[1]; q.vx = -Math.abs(q.vx); }
+        if (box[2] != null && q.y < box[2]){ q.y = box[2]; q.vy = Math.abs(q.vy); } }
+      if (q.life > q.max) P.splice(i, 1); } }
+  draw(ctx){ for (const q of this.p){ ctx.globalAlpha = Math.max(0, q.a * Math.sin(Math.PI * Math.min(1, q.life / q.max)));
+      ctx.drawImage(q.img, q.x - q.r, q.y - q.r, q.r * 2, q.r * 2); } ctx.globalAlpha = 1; }
+}
+function bench(ctx, W, H, y){ ctx.fillStyle = '#12283a'; ctx.fillRect(0, y, W, H - y); ctx.fillStyle = '#1f3b52'; ctx.fillRect(0, y, W, 2); }
+function bg(ctx, W, H){ const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0c1b29'); g.addColorStop(1, '#081420'); ctx.fillStyle = g; ctx.fillRect(0, 0, W, H); }
+function beaker(ctx, cx, bottom, w, h, frac, water){
+  const x = cx - w / 2, top = bottom - h, wl = bottom - h * frac;
+  ctx.fillStyle = water; ctx.beginPath(); ctx.moveTo(x + 2, wl); ctx.lineTo(x + w - 2, wl); ctx.lineTo(x + w - 2, bottom - 8);
+  ctx.quadraticCurveTo(x + w - 2, bottom - 2, x + w - 8, bottom - 2); ctx.lineTo(x + 8, bottom - 2); ctx.quadraticCurveTo(x + 2, bottom - 2, x + 2, bottom - 8); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x + 3, wl); ctx.lineTo(x + w - 3, wl); ctx.stroke();
+  ctx.strokeStyle = 'rgba(190,220,245,.75)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(x - 7, top - 3); ctx.lineTo(x, top + 3); ctx.lineTo(x, bottom - 8);
+  ctx.quadraticCurveTo(x, bottom, x + 8, bottom); ctx.lineTo(x + w - 8, bottom); ctx.quadraticCurveTo(x + w, bottom, x + w, bottom - 8); ctx.lineTo(x + w, top); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(x + 11, top + 16); ctx.lineTo(x + 11, bottom - 18); ctx.stroke();
+  for (let i = 1; i <= 4; i++){ const yy = bottom - h * i * .2; ctx.strokeStyle = 'rgba(190,220,245,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(x + w - 14, yy); ctx.lineTo(x + w - 2, yy); ctx.stroke(); }
+  return { x, top, wl, w };
+}
+function chunks(ctx, cx, bottom, w, n = 3, size = 1){
+  for (let i = 0; i < n; i++){ const s = (16 + (i * 7) % 9) * size; const x = cx - w * .3 + (w * .6) * (i / (n - 1 || 1)) - s / 2; const y = bottom - s - 4;
+    ctx.fillStyle = '#e9f3fb'; ctx.beginPath(); ctx.roundRect(x, y, s, s * .85, 3); ctx.fill(); ctx.fillStyle = 'rgba(160,190,215,.6)'; ctx.fillRect(x + 2, y + s * .55, s - 4, 2); }
+}
+class Bubbles {
+  constructor(){ this.b = []; }
+  spawn(x, y){ this.b.push({ x, y, r: rnd(1.5, 4), v: rnd(50, 110), w: rnd(0, 6) }); }
+  step(dt, top){ for (let i = this.b.length - 1; i >= 0; i--){ const q = this.b[i]; q.y -= q.v * dt; q.w += dt * 6; if (q.y < top) this.b.splice(i, 1); } }
+  draw(ctx){ ctx.strokeStyle = 'rgba(230,245,255,.7)'; ctx.lineWidth = 1.2; for (const q of this.b){ ctx.beginPath(); ctx.arc(q.x + Math.sin(q.w) * 2, q.y, q.r, 0, 7); ctx.stroke(); } }
+}
+const monoFont = (px, w = 700) => `${w} ${px}px "JetBrains Mono", Consolas, monospace`;
+const bodyFont = (px, w = 700) => `${w} ${px}px "Atkinson Hyperlegible", "Segoe UI", sans-serif`;
+
+/* ---------- SIM 1 : hot vs cold ---------- */
+const sim1 = (() => {
+  const S = stage('c0'); const T = [80, 10]; const fog = [new Fog(450), new Fog(450)], bub = [new Bubbles(), new Bubbles()]; const acc = [0, 0], bacc = [0, 0];
+  const L = document.getElementById('t-left'), R = document.getElementById('t-right');
+  const fac = t => Math.max(.04, Math.min(1, Math.pow((t - 2) / 88, 1.25)));
+  const sync = () => { T[0] = +L.value; T[1] = +R.value; document.getElementById('o-left').textContent = T[0] + ' °C'; document.getElementById('o-right').textContent = T[1] + ' °C';
+    document.querySelector('#m-left i').style.width = fac(T[0]) * 100 + '%'; document.querySelector('#m-right i').style.width = fac(T[1]) * 100 + '%'; };
+  L.oninput = R.oninput = sync; sync();
+  const geo = () => { const { W, H } = S; const by = H * .8, bw = Math.min(W * .28, 170), bh = Math.min(H * .42, 190); return { by, bw, bh, cx: [W * .28, W * .72] }; };
+  function step(dt){ if (!S.W) return; const g = geo();
+    for (let i = 0; i < 2; i++){ const f = fac(T[i]); const wl = g.by - g.bh * .62;
+      acc[i] += dt * 85 * f; while (acc[i] > 1){ acc[i]--; fog[i].emit(g.cx[i], wl - 2, g.bw * .8, { up: 22 + 30 * f, vx: 50, r: 10 + 8 * f, life: 3.4, a: .3 }); }
+      bacc[i] += dt * 60 * f; while (bacc[i] > 1){ bacc[i]--; bub[i].spawn(g.cx[i] + rnd(-.3, .3) * g.bw, g.by - 14); }
+      fog[i].step(dt, g.by, 16); bub[i].step(dt, wl); } }
+  function draw(){ const { ctx, W, H } = S; if (!W) return; const g = geo(); bg(ctx, W, H); bench(ctx, W, H, g.by);
+    for (let i = 0; i < 2; i++){ const t = (T[i] - 2) / 88; const col = `rgba(${Math.round(80 + 150 * t)},${Math.round(150 - 20 * t)},${Math.round(225 - 120 * t)},.38)`;
+      beaker(ctx, g.cx[i], g.by, g.bw, g.bh, .62, col); chunks(ctx, g.cx[i], g.by, g.bw); bub[i].draw(ctx);
+      if (T[i] > 45){ ctx.strokeStyle = 'rgba(255,190,150,.25)'; ctx.lineWidth = 2; for (let k = 0; k < 3; k++){ const x = g.cx[i] - 20 + k * 20; ctx.beginPath(); ctx.moveTo(x, g.by + 34); ctx.bezierCurveTo(x - 6, g.by + 26, x + 6, g.by + 20, x, g.by + 12); ctx.stroke(); } }
+      ctx.fillStyle = '#cfe2f2'; ctx.font = monoFont(Math.max(13, W * .028)); ctx.textAlign = 'center'; ctx.fillText(T[i] + ' °C', g.cx[i], g.by + (H - g.by) * .62);
+      ctx.font = bodyFont(Math.max(12, W * .022)); ctx.fillStyle = '#7fa3c2'; ctx.fillText((i ? 'B' : 'A'), g.cx[i], g.by - g.bh - 14); }
+    fog[0].draw(ctx); fog[1].draw(ctx); }
+  return { step, draw };
+})();
+
+/* ---------- SIM 2 : coloured water ---------- */
+const sim2 = (() => {
+  const S = stage('c1'); let col = 'red', pH = 7.5; const fog = new Fog(500), bub = new Bubbles(); let acc = 0, bacc = 0;
+  const cols = { none: [120, 180, 230, .3], red: [220, 40, 60, .78], blue: [40, 90, 230, .78], green: [40, 170, 80, .78] };
+  const ind = [[7.6, [40, 150, 90]], [7, [60, 170, 70]], [6.4, [160, 200, 50]], [5.8, [235, 210, 40]], [5.2, [245, 150, 40]], [4.6, [235, 95, 45]]];
+  const indCol = p => { for (let i = 0; i < ind.length - 1; i++){ const [a, ca] = ind[i], [b, cb] = ind[i + 1]; if (p <= a && p >= b){ const t = (a - p) / (a - b); return ca.map((v, k) => Math.round(v + (cb[k] - v) * t)); } } return p > 7.6 ? ind[0][1] : ind[ind.length - 1][1]; };
+  const sws = [...document.querySelectorAll('#p1 .sw')];
+  sws.forEach(b => b.addEventListener('click', () => { col = b.dataset.col; pH = 7.5; sws.forEach(x => x.setAttribute('aria-pressed', x === b)); }));
+  const r1 = document.getElementById('r1');
+  function step(dt){ if (!S.W) return; const { W, H } = S; const by = H * .82, bw = Math.min(W * .4, 230), bh = Math.min(H * .5, 220), wl = by - bh * .6;
+    acc += dt * 70; while (acc > 1){ acc--; fog.emit(W / 2, wl - 2, bw * .8, { up: 40, vx: 60, r: 14, life: 3.6, a: .32 }); }
+    bacc += dt * 45; while (bacc > 1){ bacc--; bub.spawn(W / 2 + rnd(-.3, .3) * bw, by - 14); }
+    fog.step(dt, by, 16); bub.step(dt, wl);
+    if (col === 'indicator') pH += (4.6 - pH) * dt / 16;
+    r1.innerHTML = col === 'indicator'
+      ? `<span>pH <b>${pH.toFixed(1)}</b></span><span>${tr('Warna kabus', 'Fog colour')}: <b>${tr('putih', 'white')}</b></span><span>${tr('CO₂ melarut → asid karbonik', 'CO₂ dissolves → carbonic acid')}</span>`
+      : `<span>${tr('Warna air', 'Water colour')}: <b>${tr({ none: 'jernih', red: 'merah', blue: 'biru', green: 'hijau' }[col], { none: 'clear', red: 'red', blue: 'blue', green: 'green' }[col])}</b></span><span>${tr('Warna kabus', 'Fog colour')}: <b>${tr('putih', 'white')}</b></span>`; }
+  function draw(){ const { ctx, W, H } = S; if (!W) return; const by = H * .82, bw = Math.min(W * .4, 230), bh = Math.min(H * .5, 220);
+    bg(ctx, W, H); bench(ctx, W, H, by);
+    const c = col === 'indicator' ? [...indCol(pH), .8] : cols[col];
+    beaker(ctx, W / 2, by, bw, bh, .6, `rgba(${c[0]},${c[1]},${c[2]},${c[3]})`); chunks(ctx, W / 2, by, bw, 4); bub.draw(ctx); fog.draw(ctx);
+    if (col === 'indicator'){ ctx.fillStyle = '#cfe2f2'; ctx.font = monoFont(Math.max(13, W * .03)); ctx.textAlign = 'center'; ctx.fillText('pH ' + pH.toFixed(1), W / 2, by + (H - by) * .62); } }
+  return { step, draw };
+})();
+
+/* ---------- SIM 3 : candles ---------- */
+const sim3 = (() => {
+  const S = stage('c2'); let open = false, running = false, level = 0; let flames = [1, 1, 1]; const fog = new Fog(600), smoke = new Fog(200); let acc = 0, t = 0;
+  const hs = [.2, .42, .64], xs = [.44, .63, .82];
+  const s2 = document.getElementById('s2');
+  const mt = document.getElementById('mode-tank'), mo = document.getElementById('mode-open');
+  const reset = () => { running = false; level = 0; flames = [1, 1, 1]; fog.p = []; smoke.p = []; };
+  mt.onclick = () => { open = false; mt.setAttribute('aria-pressed', true); mo.setAttribute('aria-pressed', false); reset(); };
+  mo.onclick = () => { open = true; mo.setAttribute('aria-pressed', true); mt.setAttribute('aria-pressed', false); reset(); };
+  document.getElementById('c-start').onclick = () => { running = true; };
+  document.getElementById('c-reset').onclick = reset;
+  const geo = () => { const { W, H } = S; const by = H * .86, th = H * .66; return { by, th, x0: W * .07, x1: W * .93, top: by - th }; };
+  function step(dt){ if (!S.W) return; const g = geo(); t += dt;
+    if (running){ level = Math.min(open ? .06 : .95, level + dt * .028);
+      acc += dt * 50; while (acc > 1){ acc--; fog.emit(S.W * .17, g.by - 22, 30, { up: 14, vx: 70, r: 10, life: 4.5, a: .28 }); } }
+    fog.step(dt, g.by, 40, open ? null : [g.x0 + 4, g.x1 - 4]); smoke.step(dt, -1e4, -14);
+    const co2y = g.by - level * g.th;
+    flames.forEach((f, i) => { const fy = g.by - hs[i] * g.th - 10; if (co2y < fy + 2 && f > 0){ flames[i] = Math.max(0, f - dt * 1.4); if (Math.random() < .5) smoke.emit(S.W * xs[i], fy, 4, { up: 30, vx: 10, r: 5, life: 2.2, a: .5, img: smokeSprite }); } });
+    const out = flames.filter(f => f <= 0).length;
+    s2.classList.toggle('bad', out > 0);
+    s2.textContent = !running ? tr('Tiga lilin menyala. Tekan "Masukkan ais kering".', 'Three candles are lit. Press "Add dry ice".')
+      : open ? tr('Udara terbuka: CO₂ tersebar ke sekeliling dan tidak berkumpul. Semua lilin terus menyala.', 'Open air: the CO₂ spreads away instead of collecting. All candles stay lit.')
+      : out === 0 ? tr('CO₂ (tidak nampak) mula memenuhi tangki dari bawah…', 'Invisible CO₂ starts filling the tank from the bottom…')
+      : out < 3 ? tr(`${out} lilin padam. Yang paling rendah padam dahulu.`, `${out} candle${out > 1 ? 's' : ''} out. The lowest goes out first.`)
+      : tr('Semua lilin padam. Tangki kini penuh dengan CO₂.', 'All candles are out. The tank is now full of CO₂.'); }
+  function candle(ctx, x, base, h, f){ const w = 16; ctx.fillStyle = '#ece3cf'; ctx.fillRect(x - w / 2, base - h, w, h); ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(x + w / 2 - 4, base - h, 4, h);
+    ctx.strokeStyle = '#2a2a2a'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, base - h); ctx.lineTo(x, base - h - 7); ctx.stroke();
+    if (f > 0){ const fl = (18 + Math.sin(t * 17 + x) * 2 + Math.sin(t * 7.3 + x) * 1.5) * f, fy = base - h - 6;
+      const gl = ctx.createRadialGradient(x, fy - fl * .4, 0, x, fy - fl * .4, 40 * f); gl.addColorStop(0, 'rgba(255,190,90,.35)'); gl.addColorStop(1, 'rgba(255,190,90,0)'); ctx.fillStyle = gl; ctx.fillRect(x - 40, fy - fl - 40, 80, 90);
+      const gr = ctx.createLinearGradient(x, fy, x, fy - fl); gr.addColorStop(0, '#5aa0ff'); gr.addColorStop(.25, '#ffd36a'); gr.addColorStop(1, '#ff8a2a');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(x, fy - fl); ctx.bezierCurveTo(x + 7 * f, fy - fl * .5, x + 6 * f, fy, x, fy + 2); ctx.bezierCurveTo(x - 6 * f, fy, x - 7 * f, fy - fl * .5, x, fy - fl); ctx.fill(); } }
+  function draw(){ const { ctx, W, H } = S; if (!W) return; const g = geo(); bg(ctx, W, H); bench(ctx, W, H, g.by);
+    if (level > 0 && !open){ const y = g.by - level * g.th; ctx.fillStyle = 'rgba(120,180,230,.09)'; ctx.fillRect(g.x0, y, g.x1 - g.x0, g.by - y);
+      ctx.setLineDash([6, 6]); ctx.strokeStyle = 'rgba(140,200,240,.7)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(g.x0, y); ctx.lineTo(g.x1, y); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#9cc8ea'; ctx.font = bodyFont(Math.max(11, W * .02)); ctx.textAlign = 'right'; ctx.fillText(tr('paras CO₂ (tidak nampak)', 'CO₂ level (invisible)'), g.x1 - 8, y - 6); }
+    // bowl
+    const bx = W * .17; ctx.fillStyle = '#3b5368'; ctx.beginPath(); ctx.moveTo(bx - 34, g.by - 26); ctx.lineTo(bx + 34, g.by - 26); ctx.lineTo(bx + 24, g.by); ctx.lineTo(bx - 24, g.by); ctx.closePath(); ctx.fill();
+    if (running){ ctx.fillStyle = '#e9f3fb'; for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.roundRect(bx - 26 + i * 13, g.by - 34 + (i % 2) * 3, 11, 9, 2); ctx.fill(); } }
+    hs.forEach((h, i) => candle(ctx, W * xs[i], g.by, h * g.th, flames[i]));
+    fog.draw(ctx); smoke.draw(ctx);
+    if (!open){ ctx.strokeStyle = 'rgba(190,220,245,.6)'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(g.x0, g.top); ctx.lineTo(g.x0, g.by); ctx.lineTo(g.x1, g.by); ctx.lineTo(g.x1, g.top); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,255,255,.07)'; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(g.x0 + 12, g.top + 10); ctx.lineTo(g.x0 + 12, g.by - 10); ctx.stroke(); } }
+  return { step, draw };
+})();
+
+/* ---------- SIM 4 : balloon ---------- */
+const sim4 = (() => {
+  const S = stage('c3'); let m = 8, warm = true, sub = 0, running = false, popT = 0, t = 0; const fog = new Fog(220), bub = new Bubbles(); let acc = 0;
+  const POP = 14; const ms = document.getElementById('b-mass'), bw = document.getElementById('b-warm'), bc = document.getElementById('b-cold');
+  const calc = document.getElementById('b-calc'), s3 = document.getElementById('s3');
+  const reset = () => { sub = 0; running = false; popT = 0; fog.p = []; };
+  ms.oninput = () => { m = +ms.value; document.getElementById('o-mass').textContent = m + ' g'; reset(); };
+  bw.onclick = () => { warm = true; bw.setAttribute('aria-pressed', true); bc.setAttribute('aria-pressed', false); };
+  bc.onclick = () => { warm = false; bc.setAttribute('aria-pressed', true); bw.setAttribute('aria-pressed', false); };
+  document.getElementById('b-start').onclick = () => { if (popT > 0 || sub >= m - .01) reset(); running = true; };
+  document.getElementById('b-reset').onclick = reset;
+  const vol = g => g / 44 * 24;
+  const geo = () => { const { W, H } = S; const by = H * .9, bh = H * .3, bwid = Math.min(W * .2, 100); return { by, bh, bwid, cx: W / 2, neckTop: by - bh - 34 }; };
+  function step(dt){ if (!S.W) return; const g = geo(); t += dt;
+    if (popT > 0) popT -= dt;
+    if (running){ const k = warm ? .1 : .03; sub = Math.min(m, sub + Math.max((m - sub) * k, .02) * dt);
+      if (vol(sub) >= POP){ running = false; popT = 1.6; }
+      acc += dt * (warm ? 30 : 8); while (acc > 1){ acc--; fog.emit(g.cx, g.by - g.bh * .38, g.bwid * .6, { up: 25, vx: 40, r: 9, life: 2.4, a: .35 }); }
+      if (warm && Math.random() < dt * 40) bub.spawn(g.cx + rnd(-.3, .3) * g.bwid, g.by - 12); }
+    fog.step(dt, g.by - 4, 6, [g.cx - g.bwid / 2 + 8, g.cx + g.bwid / 2 - 8, g.by - g.bh + 10]); bub.step(dt, g.by - g.bh * .38);
+    const V = vol(sub), left = m - sub;
+    calc.innerHTML = `V = (${sub.toFixed(1)} g ÷ 44) × 24 = <b>${V.toFixed(2)} dm³</b> &nbsp;·&nbsp; ${tr('baki', 'left')}: ${left.toFixed(1)} g`;
+    s3.classList.toggle('bad', popT > 0 || vol(m) > POP);
+    s3.textContent = popT > 0 ? tr('POP! Gas melebihi kira-kira 14 L yang belon boleh tampung. Guna ais kering lebih sedikit.', 'POP! The gas exceeded the roughly 14 L the balloon holds. Use less dry ice.')
+      : vol(m) > POP ? tr(`${m} g akan menghasilkan ${vol(m).toFixed(1)} L gas, lebih daripada had belon (~14 L).`, `${m} g will make ${vol(m).toFixed(1)} L of gas, more than the balloon limit (~14 L).`)
+      : !running && sub === 0 ? tr(`${m} g ais kering akan menghasilkan ${vol(m).toFixed(1)} L gas CO₂. Tekan "Pasang belon".`, `${m} g of dry ice will make ${vol(m).toFixed(1)} L of CO₂ gas. Press "Attach balloon".`)
+      : left < .05 ? tr('Semua ais kering sudah menyublim. Belon berhenti mengembang.', 'All the dry ice has sublimed. The balloon stops growing.')
+      : tr(warm ? 'Air suam mempercepatkan pemejalwapan.' : 'Tanpa air, pemejalwapan jauh lebih perlahan.', warm ? 'Warm water speeds up sublimation.' : 'Without water, sublimation is much slower.'); }
+  function draw(){ const { ctx, W, H } = S; if (!W) return; const g = geo(); bg(ctx, W, H); bench(ctx, W, H, g.by);
+    const x = g.cx - g.bwid / 2, top = g.by - g.bh, nw = g.bwid * .34;
+    // water
+    if (warm){ ctx.fillStyle = 'rgba(110,170,230,.35)'; ctx.fillRect(x + 3, g.by - g.bh * .38, g.bwid - 6, g.bh * .38 - 3); }
+    if (sub < m){ const sz = .5 + .5 * Math.cbrt((m - sub) / 30); chunks(ctx, g.cx, g.by, g.bwid, 3, sz); }
+    bub.draw(ctx); fog.draw(ctx);
+    // bottle outline
+    ctx.strokeStyle = 'rgba(190,220,245,.75)'; ctx.lineWidth = 2.5; ctx.beginPath();
+    ctx.moveTo(g.cx - nw / 2, g.neckTop); ctx.lineTo(g.cx - nw / 2, top - 6); ctx.quadraticCurveTo(x, top - 2, x, top + 22); ctx.lineTo(x, g.by - 8); ctx.quadraticCurveTo(x, g.by, x + 8, g.by);
+    ctx.lineTo(x + g.bwid - 8, g.by); ctx.quadraticCurveTo(x + g.bwid, g.by, x + g.bwid, g.by - 8); ctx.lineTo(x + g.bwid, top + 22); ctx.quadraticCurveTo(x + g.bwid, top - 2, g.cx + nw / 2, top - 6); ctx.lineTo(g.cx + nw / 2, g.neckTop); ctx.stroke();
+    // balloon
+    const V = vol(sub);
+    if (popT > 0){ const p = 1 - popT / 1.6; ctx.strokeStyle = `rgba(255,120,150,${1 - p})`; ctx.lineWidth = 3; const cy = g.neckTop - H * .2;
+      for (let i = 0; i < 12; i++){ const a = i / 12 * Math.PI * 2, r0 = 30 + p * 60, r1 = r0 + 24; ctx.beginPath(); ctx.moveTo(g.cx + Math.cos(a) * r0, cy + Math.sin(a) * r0); ctx.lineTo(g.cx + Math.cos(a) * r1, cy + Math.sin(a) * r1); ctx.stroke(); }
+      ctx.fillStyle = `rgba(255,220,230,${1 - p})`; ctx.font = bodyFont(Math.max(22, W * .07), 700); ctx.textAlign = 'center'; ctx.fillText('POP!', g.cx, cy + 10);
+      ctx.fillStyle = '#d23d63'; ctx.fillRect(g.cx - nw / 2 - 2, g.neckTop - 6, nw + 4, 10); }
+    else { const maxR = Math.min(H * .22, W * .3); const r = Math.max(14, maxR * Math.cbrt((V + .15) / POP)); const wob = Math.sin(t * 2) * .02;
+      const cy = g.neckTop - r * .95 - 6; ctx.save(); ctx.translate(g.cx, cy); ctx.rotate(wob);
+      const gr = ctx.createRadialGradient(-r * .35, -r * .4, r * .1, 0, 0, r * 1.1); gr.addColorStop(0, '#ff8aa6'); gr.addColorStop(.6, '#e2416a'); gr.addColorStop(1, '#a8224a');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, 0, r * .9, r, 0, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(-r * .25, r * .9); ctx.quadraticCurveTo(0, r * 1.15, r * .25, r * .9); ctx.lineTo(nw * .5, r * .95 + 6); ctx.lineTo(-nw * .5, r * .95 + 6); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(-r * .38, -r * .45, r * .12, r * .22, -.5, 0, 7); ctx.fill(); ctx.restore();
+      ctx.fillStyle = '#c0325a'; ctx.fillRect(g.cx - nw / 2 - 2, g.neckTop - 6, nw + 4, 12);
+      ctx.fillStyle = '#cfe2f2'; ctx.font = monoFont(Math.max(13, W * .03)); ctx.textAlign = 'left'; ctx.fillText(V.toFixed(1) + ' L', g.cx + maxR * .95 + 14, cy + 5); } }
+  return { step, draw };
+})();
+
+/* ---------- loop ---------- */
+const sims = [sim1, sim2, sim3, sim4];
+let last = performance.now();
+function frame(now){ const dt = Math.min(.05, (now - last) / 1000); last = now; const s = sims[active]; if (s){ s.step(dt); s.draw(); } requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
